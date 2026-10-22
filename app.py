@@ -9,8 +9,8 @@ CORS(app)
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")  
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "-1003987555752")
-FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261023_AB_FINAL")
-FINAL_FORM_URL_NOCACHE = "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261023_AB_FINAL&webapp=1"
+FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261024_AB_FIXED_FINAL")
+FINAL_FORM_URL_NOCACHE = "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261024_AB_FIXED_FINAL&webapp=1"
 
 latest_signal = {"signal": "WAIT", "price": 0, "time": 0, "profit": 0, "account": "", "raw": {}}
 history = []

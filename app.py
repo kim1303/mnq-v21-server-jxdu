@@ -25,7 +25,6 @@ def tg_api(method, payload):
         return {"ok": False, "error": str(e)}
 
 def send_telegram_debug(text, with_button=False, chat_id=None):
-    """텔레그램 전송 - 채널 또는 개인 채팅"""
     target = chat_id or CHANNEL_ID
     payload = {
         "chat_id": target,
@@ -41,7 +40,6 @@ def send_telegram_debug(text, with_button=False, chat_id=None):
     return tg_api("sendMessage", payload)
 
 def send_with_fixed_keyboard(chat_id, text):
-    """그림처럼 하단 고정 '매매 확인' 버튼 생성"""
     payload = {
         "chat_id": chat_id,
         "text": text,
@@ -58,15 +56,14 @@ def send_with_fixed_keyboard(chat_id, text):
     return tg_api("sendMessage", payload)
 
 def send_form_with_both(chat_id):
-    """매매 확인 클릭시 - 고정키보드 유지 + 인라인 버튼으로 폼 열기"""
+    """매매 확인 클릭시 - 텔레그램 화면에 최종이용자 폼 버튼만 표시 (URL 텍스트 노출 없음)"""
     payload = {
         "chat_id": chat_id,
-        "text": f"🟢 <b>MNQ V21 최종이용자 폼</b>\n\n아래 버튼을 클릭하여 매매를 확인하세요.\n\n📱 폼 주소: {FINAL_FORM_URL}\n시간: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+        "text": "🟢 <b>MNQ V21 최종이용자 폼</b>\n\n아래 버튼을 클릭하면 최종이용자 전용 대시보드가 열립니다.\n각 사용자의 이름과 데이터가 적용된 화면입니다. (김성택 / $2,111,184 화면)",
         "parse_mode": "HTML",
         "reply_markup": {
             "inline_keyboard": [
-                [{"text": "📱 최종이용자 폼 열기", "url": FINAL_FORM_URL}],
-                [{"text": "매매 확인", "callback_data": "check_trade"}]
+                [{"text": "📱 최종이용자 폼 열기", "url": FINAL_FORM_URL}]
             ]
         }
     }
@@ -115,11 +112,11 @@ def root():
     return jsonify({
         "서비스": "mnq-v21-server", 
         "상태": "정상", 
-        "버전": "V21-BUTTON-FIXED",
+        "버전": "V21-BUTTON-FIXED-CLEAN",
         "telegram_token_set": bool(BOT_TOKEN),
         "channel": CHANNEL_ID,
         "final_form_url": FINAL_FORM_URL,
-        "routes": ["/", "/health", "/api", "/api/history", "/api/test-telegram", "/api/setup-keyboard", "/telegram-webhook"]
+        "routes": ["/", "/health", "/api", "/api/history", "/api/test-telegram", "/api/set-webhook", "/api/setup-keyboard", "/telegram-webhook"]
     })
 
 @app.route("/health")
@@ -157,7 +154,7 @@ def api_history():
 
 @app.route("/api/test-telegram")
 def test_telegram():
-    msg = f"✅ MNQ V21 테스트 - {time.strftime('%Y-%m-%d %H:%M:%S')}\n서버: mnq-v21-server-jxdu\n<a href=\"{FINAL_FORM_URL}\">최종이용자 폼</a>"
+    msg = f"✅ MNQ V21 테스트 - {time.strftime('%Y-%m-%d %H:%M:%S')}\n서버: mnq-v21-server-jxdu"
     resp = send_telegram_debug(msg, with_button=True)
     return jsonify({
         "ok": resp.get("ok", False),
@@ -168,7 +165,6 @@ def test_telegram():
 
 @app.route("/api/set-webhook")
 def set_webhook():
-    """텔레그램 봇 웹훅 설정 - 매매 확인 버튼 작동에 필요"""
     webhook_url = f"https://{request.host}/telegram-webhook"
     resp = tg_api("setWebhook", {"url": webhook_url})
     info = tg_api("getWebhookInfo", {})
@@ -182,8 +178,6 @@ def set_webhook():
 
 @app.route("/api/setup-keyboard", methods=["GET","POST"])
 def setup_keyboard():
-    """그림처럼 '매매 확인' 고정 버튼 생성 - 채널에 고정 메시지 + 봇 웹훅 설정"""
-    # 1. 채널에 고정용 메시지 전송 (인라인 버튼 포함)
     fixed_msg = f"""🟢 <b>MNQ V21 최종이용자 폼 - 고정 메시지</b>
 
 📱 <b>매매 확인하려면 아래 버튼 클릭</b>
@@ -194,36 +188,27 @@ def setup_keyboard():
 
 <code>클릭 → 매매 확인</code>"""
     resp1 = send_telegram_debug(fixed_msg, with_button=True)
-    
-    # 2. 웹훅 URL 설정 안내
     webhook_url = f"https://{request.host}/telegram-webhook"
     return jsonify({
         "ok": True,
         "fixed_message_response": resp1,
         "final_form_url": FINAL_FORM_URL,
         "webhook_url_to_set": webhook_url,
-        "next_step": f"브라우저에서 https://api.telegram.org/bot{BOT_TOKEN[:10]}.../setWebhook?url={webhook_url} 호출하여 웹훅 설정 후 /start 입력하면 그림처럼 '매매 확인' 버튼 생성됨",
-        "manual_test": f"/telegram-webhook 에 POST로 /start 보내면 고정키보드 생성됨"
     })
 
 @app.route("/telegram-webhook", methods=["POST"])
 def telegram_webhook():
-    """텔레그램 봇 웹훅 - /start, '매매 확인' 처리하여 그림처럼 버튼 생성"""
     data = request.get_json(force=True, silent=True) or {}
     print(f"[WEBHOOK] {data}")
     
-    # Callback query (인라인 버튼 클릭)
     if "callback_query" in data:
         cb = data["callback_query"]
         chat_id = cb["message"]["chat"]["id"]
         if cb.get("data") == "check_trade":
-            # 매매 확인 콜백 -> 폼 링크 전송
             send_form_with_both(chat_id)
-            # callback 응답
             tg_api("answerCallbackQuery", {"callback_query_id": cb["id"], "text": "매매 확인 - 폼을 열어주세요"})
         return jsonify({"ok": True})
 
-    # 일반 메시지
     if "message" in data:
         msg = data["message"]
         chat_id = msg["chat"]["id"]

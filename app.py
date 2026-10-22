@@ -10,6 +10,7 @@ CORS(app)
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")  
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "-1003987555752")
 FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261022_final")
+FINAL_FORM_URL_NOCACHE = "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261022_final&webapp=1"
 
 latest_signal = {"signal": "WAIT", "price": 0, "time": 0, "profit": 0, "account": "", "raw": {}}
 history = []
@@ -34,7 +35,7 @@ def send_telegram_debug(text, with_button=False, chat_id=None):
     if with_button:
         payload["reply_markup"] = {
             "inline_keyboard": [
-                [{"text": "📱 최종이용자 폼 열기", "url": FINAL_FORM_URL}]
+                [{"text": "📱 최종이용자 폼 열기", "web_app": {"url": FINAL_FORM_URL}}]
             ]
         }
     return tg_api("sendMessage", payload)
@@ -46,7 +47,7 @@ def send_with_fixed_keyboard(chat_id, text):
         "parse_mode": "HTML",
         "reply_markup": {
             "keyboard": [
-                [{"text": "매매 확인"}]
+                [{"text": "매매 확인", "web_app": {"url": FINAL_FORM_URL}}]
             ],
             "resize_keyboard": True,
             "is_persistent": True,
@@ -59,11 +60,12 @@ def send_form_with_both(chat_id):
     """매매 확인 클릭시 - 텔레그램 화면에 최종이용자 폼 버튼만 표시 (URL 텍스트 노출 없음)"""
     payload = {
         "chat_id": chat_id,
-        "text": "🟢 <b>MNQ V21 최종이용자 폼</b>\n\n아래 버튼을 클릭하면 최종이용자 전용 대시보드가 열립니다.\n각 사용자의 이름과 데이터가 적용된 화면입니다. (김성택 / $2,111,184 화면)",
+        "text": "🟢 <b>MNQ V21 최종이용자 폼</b>\n\n아래 버튼을 클릭하면 최종이용자 전용 대시보드가 텔레그램 안에서 열립니다.\n각 사용자의 이름과 데이터가 적용된 화면입니다. (김성택 / $2,111,184 화면)",
         "parse_mode": "HTML",
         "reply_markup": {
             "inline_keyboard": [
-                [{"text": "📱 최종이용자 폼 열기", "url": FINAL_FORM_URL}]
+                [{"text": "📱 최종이용자 폼 열기", "web_app": {"url": FINAL_FORM_URL}}],
+                [{"text": "🌐 브라우저에서 열기", "url": FINAL_FORM_URL}]
             ]
         }
     }
@@ -112,7 +114,7 @@ def root():
     return jsonify({
         "서비스": "mnq-v21-server", 
         "상태": "정상", 
-        "버전": "V21-BUTTON-FIXED-CLEAN",
+        "버전": "V21-WEBAPP-BOTH-INSIDE",
         "telegram_token_set": bool(BOT_TOKEN),
         "channel": CHANNEL_ID,
         "final_form_url": FINAL_FORM_URL,

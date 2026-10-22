@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import time
@@ -10,8 +9,7 @@ CORS(app)
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")  
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "-1003987555752")
-FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261022_final")
-FINAL_FORM_URL_NOCACHE = "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261022_final&webapp=1"
+FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261024_AB_FIXED_FINAL")
 
 latest_signal = {"signal": "WAIT", "price": 0, "time": 0, "profit": 0, "account": "", "raw": {}}
 history = []
@@ -25,21 +23,6 @@ def tg_api(method, payload):
         return r.json()
     except Exception as e:
         return {"ok": False, "error": str(e)}
-
-def send_telegram_debug(text, with_button=False, chat_id=None):
-    target = chat_id or CHANNEL_ID
-    payload = {
-        "chat_id": target,
-        "text": text,
-        "parse_mode": "HTML"
-    }
-    if with_button:
-        payload["reply_markup"] = {
-            "inline_keyboard": [
-                [{"text": "📱 최종이용자 폼 열기", "web_app": {"url": FINAL_FORM_URL}}]
-            ]
-        }
-    return tg_api("sendMessage", payload)
 
 def send_with_fixed_keyboard(chat_id, text):
     payload = {
@@ -58,10 +41,9 @@ def send_with_fixed_keyboard(chat_id, text):
     return tg_api("sendMessage", payload)
 
 def send_form_with_both(chat_id):
-    """매매 확인 클릭시 - 텔레그램 화면에 최종이용자 폼 버튼만 표시 (URL 텍스트 노출 없음)"""
     payload = {
         "chat_id": chat_id,
-        "text": "🟢 <b>MNQ V21 최종이용자 폼</b>\n\n아래 버튼을 클릭하면 최종이용자 전용 대시보드가 텔레그램 안에서 열립니다.\n각 사용자의 이름과 데이터가 적용된 화면입니다. (김성택 / $2,111,184 화면)",
+        "text": "🟢 <b>MNQ V21 최종이용자 폼</b>\n\n아래 버튼을 클릭하면 최종이용자 전용 대시보드가 텔레그램 안에서 열립니다. (김성택 / $2,111,184 화면)",
         "parse_mode": "HTML",
         "reply_markup": {
             "inline_keyboard": [
@@ -79,52 +61,19 @@ def format_final_user_message(data):
     account = data.get("account", "-")
     t = time.strftime("%Y-%m-%d %H:%M:%S")
     if signal == "BUY":
-        return f"""🟢 <b>MNQ V21 매수 신호</b>
-<b>신호: BUY</b>
-가격: {price}
-수익: {profit}
-계좌: {account}
-시간: {t}
-
-<code>BUY | {price} | {profit}</code>"""
+        return f"🟢 <b>MNQ V21 매수 신호</b>\n<b>신호: BUY</b>\n가격: {price}\n수익: {profit}\n계좌: {account}\n시간: {t}\n\n<code>BUY | {price} | {profit}</code>"
     elif signal == "SELL":
-        return f"""🔴 <b>MNQ V21 매도 신호</b>
-<b>신호: SELL</b>
-가격: {price}
-수익: {profit}
-계좌: {account}
-시간: {t}
-
-<code>SELL | {price} | {profit}</code>"""
-    elif signal == "CLOSE" or "청산" in signal:
-        return f"""💰 <b>포지션 청산</b>
-수익 확정: {profit}
-최종 가격: {price}
-계좌 잔고: {account}
-시간: {t}"""
+        return f"🔴 <b>MNQ V21 매도 신호</b>\n<b>신호: SELL</b>\n가격: {price}\n수익: {profit}\n계좌: {account}\n시간: {t}\n\n<code>SELL | {price} | {profit}</code>"
     else:
-        return f"""🟦 <b>MNQ V21 대기중</b>
-신호: WAIT
-가격: {price}
-수익: {profit}
-계좌: {account}
-시간: {t}"""
+        return f"🟦 <b>MNQ V21 대기중</b>\n신호: WAIT\n가격: {price}\n수익: {profit}\n계좌: {account}\n시간: {t}"
 
 @app.route("/")
 def root():
-    return jsonify({
-        "서비스": "mnq-v21-server", 
-        "상태": "정상", 
-        "버전": "V21-WEBAPP-BOTH-INSIDE",
-        "telegram_token_set": bool(BOT_TOKEN),
-        "channel": CHANNEL_ID,
-        "final_form_url": FINAL_FORM_URL,
-        "routes": ["/", "/health", "/api", "/api/history", "/api/test-telegram", "/api/set-webhook", "/api/setup-keyboard", "/telegram-webhook"]
-    })
+    return jsonify({"서비스": "mnq-v21-server", "상태": "정상", "버전": "V21-AB-FIXED-FINAL", "channel": CHANNEL_ID, "final_form_url": FINAL_FORM_URL})
 
 @app.route("/health")
 def health():
-    return jsonify({"ok": True, "latest": latest_signal, "uptime": time.time(), "telegram": bool(BOT_TOKEN)})
+    return jsonify({"ok": True, "latest": latest_signal})
 
 @app.route("/api", methods=["GET","POST"])
 @app.route("/api/", methods=["GET","POST"])
@@ -135,116 +84,36 @@ def api():
     data = request.get_json(force=True, silent=True) or {}
     signal = data.get("signal") or data.get("action") or "WAIT"
     signal = str(signal).upper()
-    latest_signal = {
-        "signal": signal,
-        "price": data.get("price", 0),
-        "time": int(time.time()),
-        "profit": data.get("profit", 0),
-        "account": data.get("account", ""),
-        "raw": data
-    }
+    latest_signal = {"signal": signal, "price": data.get("price", 0), "time": int(time.time()), "profit": data.get("profit", 0), "account": data.get("account", ""), "raw": data}
     history.append(latest_signal)
-    if len(history) > 100:
-        history.pop(0)
-    print(f"[SERVER] 수신: {latest_signal}")
+    if len(history) > 100: history.pop(0)
     tg_text = format_final_user_message(latest_signal)
-    tg_resp = send_telegram_debug(tg_text, with_button=True)
-    return jsonify({"ok": True, "received": latest_signal, "telegram_response": tg_resp})
-
-@app.route("/api/history")
-def api_history():
-    return jsonify(history[-20:])
-
-@app.route("/api/test-telegram")
-def test_telegram():
-    msg = f"✅ MNQ V21 테스트 - {time.strftime('%Y-%m-%d %H:%M:%S')}\n서버: mnq-v21-server-jxdu"
-    resp = send_telegram_debug(msg, with_button=True)
-    return jsonify({
-        "ok": resp.get("ok", False),
-        "channel": CHANNEL_ID,
-        "final_form_url": FINAL_FORM_URL,
-        "telegram_full_response": resp
-    })
+    tg_api("sendMessage", {"chat_id": CHANNEL_ID, "text": tg_text, "parse_mode": "HTML", "reply_markup": {"inline_keyboard": [[{"text": "📱 최종이용자 폼 열기", "web_app": {"url": FINAL_FORM_URL}}]]}})
+    return jsonify({"ok": True, "received": latest_signal})
 
 @app.route("/api/set-webhook")
 def set_webhook():
     webhook_url = f"https://{request.host}/telegram-webhook"
     resp = tg_api("setWebhook", {"url": webhook_url})
     info = tg_api("getWebhookInfo", {})
-    return jsonify({
-        "ok": resp.get("ok", False),
-        "setWebhook_response": resp,
-        "webhookInfo": info,
-        "webhook_url": webhook_url,
-        "next": "텔레그램에서 @mnq_signal_2026_bot 에게 /start 입력하면 하단에 '매매 확인' 버튼 생성됨"
-    })
-
-@app.route("/api/setup-keyboard", methods=["GET","POST"])
-def setup_keyboard():
-    fixed_msg = f"""🟢 <b>MNQ V21 최종이용자 폼 - 고정 메시지</b>
-
-📱 <b>매매 확인하려면 아래 버튼 클릭</b>
-
-폼 주소: {FINAL_FORM_URL}
-채널: {CHANNEL_ID}
-시간: {time.strftime('%Y-%m-%d %H:%M:%S')}
-
-<code>클릭 → 매매 확인</code>"""
-    resp1 = send_telegram_debug(fixed_msg, with_button=True)
-    webhook_url = f"https://{request.host}/telegram-webhook"
-    return jsonify({
-        "ok": True,
-        "fixed_message_response": resp1,
-        "final_form_url": FINAL_FORM_URL,
-        "webhook_url_to_set": webhook_url,
-    })
+    return jsonify({"ok": resp.get("ok", False), "setWebhook_response": resp, "webhookInfo": info, "webhook_url": webhook_url})
 
 @app.route("/telegram-webhook", methods=["POST"])
 def telegram_webhook():
     data = request.get_json(force=True, silent=True) or {}
-    print(f"[WEBHOOK] {data}")
-    
-    if "callback_query" in data:
-        cb = data["callback_query"]
-        chat_id = cb["message"]["chat"]["id"]
-        if cb.get("data") == "check_trade":
-            send_form_with_both(chat_id)
-            tg_api("answerCallbackQuery", {"callback_query_id": cb["id"], "text": "매매 확인 - 폼을 열어주세요"})
-        return jsonify({"ok": True})
-
     if "message" in data:
         msg = data["message"]
         chat_id = msg["chat"]["id"]
         text = msg.get("text", "").strip()
-        
         if text == "/start":
-            welcome = f"""🟢 <b>MNQ Signal Bot</b>
-
-안녕하세요! MNQ V21 신호봇입니다.
-
-하단 <b>'매매 확인'</b> 버튼을 누르면 최종이용자 폼이 열립니다.
-
-📱 폼: {FINAL_FORM_URL}
-채널: {CHANNEL_ID}
-
-명령어:
-/start - 시작 및 버튼 생성
-/form - 폼 바로 열기
-"""
+            welcome = f"🟢 <b>MNQ Signal Bot</b>\n\n하단 <b>'매매 확인'</b> 버튼을 누르면 최종이용자 폼이 열립니다.\n\n📱 폼: {FINAL_FORM_URL}\n채널: {CHANNEL_ID}\n\n명령어:\n/start - 시작 및 버튼 생성\n/form - 폼 바로 열기"
             send_with_fixed_keyboard(chat_id, welcome)
-            return jsonify({"ok": True, "action": "sent_welcome_with_keyboard"})
-        
-        elif text == "매매 확인" or text == "/form":
+            return jsonify({"ok": True})
+        elif text == "매매 확인" or text == "/form" or "/form" in text or "/매매" in text:
             send_form_with_both(chat_id)
-            return jsonify({"ok": True, "action": "sent_form"})
-        
-        elif "/form" in text or "/매매" in text:
-            send_form_with_both(chat_id)
-            return jsonify({"ok": True, "action": "sent_form_alias"})
-    
-    return jsonify({"ok": True, "ignored": True})
+            return jsonify({"ok": True})
+    return jsonify({"ok": True})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-

@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import time
@@ -9,8 +10,8 @@ CORS(app)
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")  
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "-1003987555752")
-FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261024_AB_FIXED_FINAL")
-FINAL_FORM_URL_NOCACHE = "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261024_AB_FIXED_FINAL&webapp=1"
+FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261022_final")
+FINAL_FORM_URL_NOCACHE = "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261022_final&webapp=1"
 
 latest_signal = {"signal": "WAIT", "price": 0, "time": 0, "profit": 0, "account": "", "raw": {}}
 history = []
@@ -114,7 +115,7 @@ def root():
     return jsonify({
         "서비스": "mnq-v21-server", 
         "상태": "정상", 
-        "버전": "V21-AB-BOTH-FIXED-20261023",
+        "버전": "V21-WEBAPP-BOTH-INSIDE",
         "telegram_token_set": bool(BOT_TOKEN),
         "channel": CHANNEL_ID,
         "final_form_url": FINAL_FORM_URL,
@@ -246,3 +247,4 @@ def telegram_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+

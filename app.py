@@ -9,7 +9,7 @@ CORS(app)
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")  
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "-1003987555752")
-FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261024_D_FIXED")
+FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=20261025_SINGLE_FINAL")
 
 latest_signal = {"signal": "WAIT", "price": 0, "time": 0, "profit": 0, "account": "", "raw": {}}
 history = []
@@ -41,14 +41,14 @@ def send_with_fixed_keyboard(chat_id, text):
     return tg_api("sendMessage", payload)
 
 def send_form_with_both(chat_id):
+    # 단일 최종이용자 폼만 - 구형 -180 제거, 창 1개만
     payload = {
         "chat_id": chat_id,
-        "text": "🟢 <b>MNQ V21 최종이용자 폼</b>\n\n아래 버튼을 클릭하면 최종이용자 전용 대시보드가 텔레그램 안에서 열립니다. (김성택 / $2,111,184 화면)",
+        "text": "🟢 <b>MNQ V21 최종이용자 폼</b>\n\n아래 버튼 1개만 클릭하면 최종이용자 전용 대시보드가 열립니다. (김성택 / $2,111,184 / 전일 120.5)",
         "parse_mode": "HTML",
         "reply_markup": {
             "inline_keyboard": [
-                [{"text": "📱 최종이용자 폼 열기", "web_app": {"url": FINAL_FORM_URL}}],
-                [{"text": "🌐 브라우저에서 열기", "url": FINAL_FORM_URL}]
+                [{"text": "📱 최종이용자 폼 열기", "web_app": {"url": FINAL_FORM_URL}}]
             ]
         }
     }

@@ -10,12 +10,14 @@ CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "-1003987555752")
 # 초기 상태에서는 FINAL URL 비활성 - 깔끔한 빈 상태
 FINAL_FORM_URL = "https://shiny-hall-b9ed.duribun8.workers.dev?v=INITIAL"
 # 새 NPOINT ID - 실매매 계산 통일 - 2026-10-24 - Render 로그인 없이 GitHub로 교체
-NPOINT_ID = os.environ.get("NPOINT_ID", "10b790b906137128e435")
-NPOINT_URL = os.environ.get("NPOINT_URL", "https://api.npoint.io/10b790b906137128e435")
+NPOINT_ID = "10b790b906137128e435"
+NPOINT_URL = "https://api.npoint.io/10b790b906137128e435"
+
 # 수익확인 고지 문구 - 개인PC/관리자PC와 동일 - 2026-10-24 수정
 PROFIT_DISCLAIMER = "수수료0.02%(증권사별 다름) + 슬리피지0.5틱 미포함 이기 때문에 정확한 수익은 이용 하고 있는 증권사의 매매집계를 참조 하십시요"
 FEE_INFO = "수수료0.02%(증권사별 다름) + 슬리피지0.5틱 미포함"
 REAL_CALC = {"fee": 0.0002, "slippage": 0.5, "formula": "(청산가-진입가)*수량*포인트가치 - 수수료0.02% - 슬리피지0.5틱", "note": "텔레그램,관리자PC,유저PC 모두 실매매처럼 계산"}
+text += f"\n\n※ {PROFIT_DISCLAIMER}"
 def tg_api(method, payload=None):
     if not BOT_TOKEN:
         return {"ok": False, "error": "NO_TOKEN"}

@@ -7,17 +7,25 @@ CORS(app)
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "-1003987555752")
-# 초기 상태에서는 FINAL URL 비활성 - 깔끔한 빈 상태
-FINAL_FORM_URL = "https://shiny-hall-b9ed.duribun8.workers.dev?v=INITIAL"
-# 새 NPOINT ID - 실매매 계산 통일 - 2026-10-24 - Render 로그인 없이 GitHub로 교체
-NPOINT_ID = "10b790b906137128e435"
-NPOINT_URL = "https://api.npoint.io/10b790b906137128e435"
+FINAL_FORM_URL = os.environ.get("FINAL_FORM_URL", "https://shiny-hall-b9ed.duribun8.workers.dev?v=INITIAL")
 
-# 수익확인 고지 문구 - 개인PC/관리자PC와 동일 - 2026-10-24 수정
-PROFIT_DISCLAIMER = "수수료0.02%(증권사별 다름) + 슬리피지0.5틱 미포함 이기 때문에 정확한 수익은 이용 하고 있는 증권사의 매매집계를 참조 하십시요"
-FEE_INFO = "수수료0.02%(증권사별 다름) + 슬리피지0.5틱 미포함"
-REAL_CALC = {"fee": 0.0002, "slippage": 0.5, "formula": "(청산가-진입가)*수량*포인트가치 - 수수료0.02% - 슬리피지0.5틱", "note": "텔레그램,관리자PC,유저PC 모두 실매매처럼 계산"}
-text += f"\n\n※ {PROFIT_DISCLAIMER}"
+# 새 NPOINT ID - 사진 Saved 비활성화 = 저장완료된 그 ID
+NPOINT_ID = os.environ.get("NPOINT_ID", "3ea328e3dfcf89218a22")
+NPOINT_URL = os.environ.get("NPOINT_URL", f"https://api.npoint.io/{NPOINT_ID}")
+
+# 수익확인 고지 문구 - 개인PC/관리자PC/텔레그램 통일 - 2026-10-24
+PROFIT_DISCLAIMER = os.environ.get("PROFIT_DISCLAIMER", "수수료0.02%(증권사별 다름) + 슬리피지0.5틱 미포함 이기 때문에 정확한 수익은 이용 하고 있는 증권사의 매매집계를 참조 하십시요")
+FEE_INFO = os.environ.get("FEE_INFO", "수수료0.02%(증권사별 다름) + 슬리피지0.5틱 미포함")
+REAL_CALC = {"fee": 0.0002, "slippage": 0.5, "formula": "(청산가-진입가)*수량*포인트가치 - 수수료0.02% - 슬리피지0.5틱"}
+
+def attach_disclaimer(text):
+    if not text:
+        return text
+    if ("$" in text or "수익" in text or "수익률" in text):
+        if "수수료0.02%" not in text:
+            text = text + f"\n\n※ {PROFIT_DISCLAIMER}"
+    return text
+
 def tg_api(method, payload=None):
     if not BOT_TOKEN:
         return {"ok": False, "error": "NO_TOKEN"}
@@ -36,41 +44,27 @@ def root():
     return jsonify({
         "서비스": "mnq-v21-server",
         "상태": "초기상태 - 모든 설정 삭제됨",
-        "버전": "INITIAL_STATE_v1",
-        "channel": CHANNEL_ID,
-        "note": "텔레그램 초기 상태로 복구됨"
+        "NPOINT_ID": NPOINT_ID,
+        "NPOINT_URL": NPOINT_URL,
+        "PROFIT_DISCLAIMER": PROFIT_DISCLAIMER
     })
 
 @app.route("/health")
 def health():
-    return jsonify({"ok": True, "state": "INITIAL"})
+    return jsonify({"ok": True, "status": "healthy", "npoint": NPOINT_ID})
 
-@app.route("/api/factory-reset", methods=["GET"])
+@app.route("/api/factory-reset")
 def factory_reset():
-    """텔레그램을 완전 초기 상태로 복구 - 모든 설정 삭제"""
     results = {}
-    
-    # 1. Webhook 삭제 - Telegram 서버에서 webhook 제거
-    results["deleteWebhook"] = tg_api("deleteWebhook", {"drop_pending_updates": True})
-    
-    # 2. 모든 Bot 명령어 삭제
-    results["deleteMyCommands"] = tg_api("deleteMyCommands", {})
-    
-    # 3. 메뉴 버튼 초기화
-    results["setMenuButton_default"] = tg_api("setChatMenuButton", {"menu_button": {"type": "default"}})
-    
-    # 4. 채널과 개인 채팅에 remove_keyboard 전송 - 버튼 2개 제거
-    # 채널
     try:
         payload_channel = {
             "chat_id": CHANNEL_ID,
-            "text": "🗑️ 초기 상태 복구 - 모든 설정 삭제됨\n\n이제 텔레그램을 재설치한 것과 같은 깨끗한 상태입니다.",
+            "text": "초기 상태 복구 - 모든 설정 삭제됨\n이제 텔레그램을 재설치한 것과 같은 깨끗한 상태입니다.",
             "reply_markup": {"remove_keyboard": True}
         }
         results["remove_keyboard_channel"] = tg_api("sendMessage", payload_channel)
     except Exception as e:
         results["remove_keyboard_channel"] = {"ok": False, "error": str(e)}
-    
     return jsonify({
         "ok": True,
         "message": "텔레그램 초기 상태로 복구 완료",
@@ -87,7 +81,7 @@ def remove_keyboard():
     chat_id = request.args.get("chat_id", CHANNEL_ID)
     payload = {
         "chat_id": chat_id,
-        "text": "🗑️ 키보드 제거 완료 - 초기 상태",
+        "text": "키보드 제거 완료 - 초기 상태",
         "reply_markup": {"remove_keyboard": True}
     }
     r = tg_api("sendMessage", payload)
@@ -95,13 +89,40 @@ def remove_keyboard():
 
 @app.route("/api/delete-all")
 def delete_all():
-    # 위 factory-reset과 동일하지만 짧은 이름
     return factory_reset()
 
-@app.route("/telegram-webhook", methods=["POST"])
+def get_profit_text():
+    try:
+        resp = requests.get(NPOINT_URL, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, dict) and "profit_text" in data:
+                return attach_disclaimer(data["profit_text"])
+    except:
+        pass
+    base = "수익 현황 · 단순 수익률 (복리 아님) · 초기 $10,000 기준\n$2,111,184\n관리자 수익률 +60%\n내 PC 수익률 +54%\n\n⚠️ 1억 전에는 출금 하지 마십시오.\n천오백으로 1년이면 1억 됩니다."
+    return attach_disclaimer(base)
+
+@app.route("/webhook", methods=["POST", "GET"])
 def webhook():
-    # 초기 상태에서는 webhook이 없으므로 아무것도 하지 않음
-    return jsonify({"ok": True, "state": "INITIAL - no action"})
+    if request.method == "GET":
+        return jsonify({"ok": True, "webhook": "ready", "npoint": NPOINT_ID})
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        message = data.get("message") or data.get("edited_message") or {}
+        chat = message.get("chat") or {}
+        chat_id = chat.get("id") or CHANNEL_ID
+        text_in = message.get("text", "")
+        if "/start" in text_in or "수익" in text_in or "현황" in text_in or text_in.strip() == "":
+            out_text = get_profit_text()
+            payload = {"chat_id": chat_id, "text": out_text}
+            tg_api("sendMessage", payload)
+            return jsonify({"ok": True, "sent": "profit_with_disclaimer", "npoint": NPOINT_ID})
+        payload = {"chat_id": chat_id, "text": f"받음: {text_in}"}
+        tg_api("sendMessage", payload)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))

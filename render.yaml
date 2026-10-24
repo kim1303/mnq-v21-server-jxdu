@@ -12,3 +12,7 @@ services:
         sync: false
       - key: TELEGRAM_CHANNEL_ID
         value: -1004340608403
+            - key: NPOINT_ID
+    value: 10b790b906137128e435
+    - key: NPOINT_URL
+    value: https://api.npoint.io/10b790b906137128e435
